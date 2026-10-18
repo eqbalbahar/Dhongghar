@@ -3,11 +3,18 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Sparkles, Truck, ShieldCheck, Gem, RotateCcw, Zap, Star } from 'lucide-react';
 import { fetchCategories, fetchProducts } from '@/lib/catalog';
-import type { Category, Product, HeroBanner } from '@/lib/types';
+import type { Category, Product, HeroBanner, HeroFont } from '@/lib/types';
 import { ProductCard } from '@/components/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { useSettings } from '@/context/SettingsContext';
+
+const HERO_FONT_CLASSES: Record<HeroFont, string> = {
+  serif: 'font-display',
+  sans: 'font-sans',
+  playfair: 'font-display',
+  cinematic: 'font-display tracking-tight',
+};
 
 export function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -39,6 +46,11 @@ export function HomePage() {
   const titleParts = heroTitle.split(' ');
   const titleLast = titleParts.pop() || '';
   const titleFirst = titleParts.join(' ');
+  const heroFont = hero.font || settings?.hero_font || 'serif';
+  const heroFontClass = HERO_FONT_CLASSES[heroFont];
+  const heroBadge = hero.badge || (settings?.tagline ? `${settings.tagline} · Est. 2025` : 'Luxury Fashion House · Est. 2025');
+  const secondaryCta = hero.secondary_cta || settings?.hero_secondary_cta || 'Flash Sale';
+  const secondaryLink = hero.secondary_link || settings?.hero_secondary_link || '/shop?flash=1';
 
   useEffect(() => {
     if (banners.length <= 1) return;
@@ -86,15 +98,15 @@ export function HomePage() {
               transition={{ delay: 0.2 }}
               className="chip mb-5 border-gold-400/30 bg-gold-400/10 text-gold-300"
             >
-              <Sparkles size={12} /> {settings?.tagline || 'Luxury Fashion House'} · Est. 2025
+              <Sparkles size={12} /> {heroBadge}
             </motion.span>
-            <h1 className="font-display text-5xl font-semibold leading-[1.02] text-ink-50 sm:text-6xl lg:text-7xl">
+            <h1 className={`${heroFontClass} text-5xl font-semibold leading-[1.02] text-ink-50 sm:text-6xl lg:text-7xl`}>
               {titleFirst} <span className="gold-text">{titleLast}</span>
             </h1>
             <p className="mt-5 max-w-md text-lg leading-relaxed text-ink-200">{hero.subtitle}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to={hero.link || '/shop'} className="btn-gold px-7 py-3.5">{hero.cta || 'Shop Collection'} <ArrowRight size={16} /></Link>
-              <Link to="/shop?flash=1" className="btn-ghost px-7 py-3.5"><Zap size={15} className="text-gold-400" /> Flash Sale</Link>
+              <Link to={secondaryLink} className="btn-ghost px-7 py-3.5"><Zap size={15} className="text-gold-400" /> {secondaryCta}</Link>
             </div>
 
             <div className="mt-12 flex flex-wrap gap-6 text-sm text-ink-300">

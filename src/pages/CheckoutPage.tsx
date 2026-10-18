@@ -270,62 +270,22 @@ export function CheckoutPage() {
               ))}
             </div>
 
-            {payment === 'bkash' && (
-              <div className="mt-4 space-y-3 rounded-2xl bg-accent-500/10 p-4 text-sm text-accent-200">
-                {walletNumber('bkash') ? (
-                  <p>{settings?.bkash_instructions || `Send money to our bKash number below, then enter the TrxID. Amount: ${formatMoney(totalBdt, currency, settings)}`}</p>
-                ) : (
-                  <p>Send money to our bKash number (contact us for the number), then enter the TrxID below. Amount: {formatMoney(totalBdt, currency, settings)}</p>
-                )}
-                {walletNumber('bkash') && (
-                  <div className="flex items-center justify-between rounded-xl border border-accent-500/30 bg-ink-950/60 px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-accent-400">bKash Number</p>
-                      <p className="font-mono text-lg font-semibold text-ink-50">{walletNumber('bkash')}</p>
-                    </div>
-                    <button onClick={() => copy(walletNumber('bkash')!, 'bkash')} className="btn-gold px-3 py-1.5 text-xs">{copied === 'bkash' ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}</button>
-                  </div>
-                )}
-                <div><label className="mb-1 block text-xs uppercase tracking-wider text-ink-400">bKash Transaction ID (TrxID) *</label><input value={trxid} onChange={(e) => setTrxid(e.target.value)} className="input-glass font-mono" placeholder="e.g. 8N7D5XKZAB" /></div>
-              </div>
-            )}
-            {payment === 'nagad' && (
-              <div className="mt-4 space-y-3 rounded-2xl bg-accent-500/10 p-4 text-sm text-accent-200">
-                {walletNumber('nagad') ? (
-                  <p>{settings?.nagad_instructions || `Send money to our Nagad number below, then enter the TrxID. Amount: ${formatMoney(totalBdt, currency, settings)}`}</p>
-                ) : (
-                  <p>Send money to our Nagad number (contact us for the number), then enter the TrxID below. Amount: {formatMoney(totalBdt, currency, settings)}</p>
-                )}
-                {walletNumber('nagad') && (
-                  <div className="flex items-center justify-between rounded-xl border border-accent-500/30 bg-ink-950/60 px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-accent-400">Nagad Number</p>
-                      <p className="font-mono text-lg font-semibold text-ink-50">{walletNumber('nagad')}</p>
-                    </div>
-                    <button onClick={() => copy(walletNumber('nagad')!, 'nagad')} className="btn-gold px-3 py-1.5 text-xs">{copied === 'nagad' ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}</button>
-                  </div>
-                )}
-                <div><label className="mb-1 block text-xs uppercase tracking-wider text-ink-400">Nagad Transaction ID (TrxID) *</label><input value={trxid} onChange={(e) => setTrxid(e.target.value)} className="input-glass font-mono" placeholder="e.g. NAGD5XKZAB" /></div>
-              </div>
-            )}
-            {payment === 'rocket' && (
-              <div className="mt-4 space-y-3 rounded-2xl bg-accent-500/10 p-4 text-sm text-accent-200">
-                {walletNumber('rocket') ? (
-                  <p>{settings?.rocket_instructions || `Send money to our Rocket number below, then enter the TrxID. Amount: ${formatMoney(totalBdt, currency, settings)}`}</p>
-                ) : (
-                  <p>Send money to our Rocket number (contact us for the number), then enter the TrxID below. Amount: {formatMoney(totalBdt, currency, settings)}</p>
-                )}
-                {walletNumber('rocket') && (
-                  <div className="flex items-center justify-between rounded-xl border border-accent-500/30 bg-ink-950/60 px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-accent-400">Rocket Number</p>
-                      <p className="font-mono text-lg font-semibold text-ink-50">{walletNumber('rocket')}</p>
-                    </div>
-                    <button onClick={() => copy(walletNumber('rocket')!, 'rocket')} className="btn-gold px-3 py-1.5 text-xs">{copied === 'rocket' ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}</button>
-                  </div>
-                )}
-                <div><label className="mb-1 block text-xs uppercase tracking-wider text-ink-400">Rocket Transaction ID (TrxID) *</label><input value={trxid} onChange={(e) => setTrxid(e.target.value)} className="input-glass font-mono" placeholder="e.g. RKT5XKZAB" /></div>
-              </div>
+            {needsTrxid && (
+              <WalletPaymentBox
+                method={payment}
+                number={walletNumber(payment)}
+                label={walletLabel(payment)}
+                instructions={
+                  (payment === 'bkash' ? settings?.bkash_instructions :
+                  payment === 'nagad' ? settings?.nagad_instructions :
+                  settings?.rocket_instructions) ?? null
+                }
+                amount={formatMoney(totalBdt, currency, settings)}
+                trxid={trxid}
+                setTrxid={setTrxid}
+                copied={copied === payment}
+                onCopy={(text) => copy(text, payment)}
+              />
             )}
             {payment === 'card' && (
               <div className="mt-4 space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm">
@@ -452,6 +412,52 @@ export function CheckoutPage() {
           <button onClick={sendOtp} className="w-full text-center text-xs text-ink-400 hover:text-gold-300">Resend OTP</button>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function WalletPaymentBox({
+  method,
+  number,
+  label,
+  instructions,
+  amount,
+  trxid,
+  setTrxid,
+  copied,
+  onCopy,
+}: {
+  method: PaymentMethod;
+  number: string | null;
+  label: string;
+  instructions: string | null;
+  amount: string;
+  trxid: string;
+  setTrxid: (v: string) => void;
+  copied: boolean;
+  onCopy: (text: string) => void;
+}) {
+  const defaultInstruction = `Send money to our ${label} number below, then enter the TrxID. Amount: ${amount}`;
+  const placeholder = method === 'bkash' ? 'e.g. 8N7D5XKZAB' : method === 'nagad' ? 'e.g. NAGD5XKZAB' : 'e.g. RKT5XKZAB';
+
+  return (
+    <div className="mt-4 space-y-3 rounded-2xl bg-accent-500/10 p-4 text-sm text-accent-200">
+      <p>{instructions || (number ? defaultInstruction : `Send money to our ${label} number (contact us for the number), then enter the TrxID below. Amount: ${amount}`)}</p>
+      {number && (
+        <div className="flex items-center justify-between rounded-xl border border-accent-500/30 bg-ink-950/60 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-accent-400">{label} Number</p>
+            <p className="font-mono text-lg font-semibold text-ink-50">{number}</p>
+          </div>
+          <button onClick={() => onCopy(number)} className="btn-gold px-3 py-1.5 text-xs">
+            {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+          </button>
+        </div>
+      )}
+      <div>
+        <label className="mb-1 block text-xs uppercase tracking-wider text-ink-400">{label} Transaction ID (TrxID) *</label>
+        <input value={trxid} onChange={(e) => setTrxid(e.target.value)} className="input-glass font-mono" placeholder={placeholder} />
+      </div>
     </div>
   );
 }

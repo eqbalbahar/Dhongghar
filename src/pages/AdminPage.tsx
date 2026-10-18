@@ -6,14 +6,14 @@ import {
   Search, Plus, Pencil, Trash2, X, Save, TrendingUp, DollarSign, AlertTriangle,
   Download, Eye, Shield, Bitcoin, Sparkles, Phone, Mail, MapPin, Facebook, Instagram, Music2, MessageCircle,
   Truck, ShieldCheck, Lock, CheckCircle2, Send, Image as ImageIcon, Upload, FileDown, FileSpreadsheet,
-  CreditCard, PlusCircle, Terminal, Copy, ArrowRight,
+  CreditCard, PlusCircle, Terminal, Copy, ArrowRight, ArrowUp, ArrowDown, Star,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_CONFIGURED } from '@/lib/supabase';
 import { formatMoney, slugify } from '@/lib/format';
 import { fetchProducts, fetchCategories } from '@/lib/catalog';
-import type { Product, Order, Coupon, Category, StoreSettings, OrderStatus } from '@/lib/types';
+import type { Product, Order, Coupon, Category, StoreSettings, OrderStatus, HeroBanner, HeroFont } from '@/lib/types';
 import { Modal } from '@/components/ui/Modal';
 
 type AdminTab = 'dashboard' | 'products' | 'categories' | 'orders' | 'coupons' | 'appearance' | 'pixels' | 'payments' | 'courier' | 'policies' | 'banners' | 'ai' | 'contact' | 'fraud' | 'admin_security' | 'developer';
@@ -470,6 +470,71 @@ function ProductsTab() {
   );
 }
 
+function ImageManager({ images, onChange }: { images: string[]; onChange: (imgs: string[]) => void }) {
+  const [urlInput, setUrlInput] = useState('');
+  const addUrl = () => {
+    const v = urlInput.trim();
+    if (!v) return;
+    if (images.length >= 5) return;
+    onChange([...images, v]);
+    setUrlInput('');
+  };
+  const remove = (i: number) => onChange(images.filter((_, idx) => idx !== i));
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= images.length) return;
+    const next = [...images];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+  const setPrimary = (i: number) => {
+    if (i === 0) return;
+    const next = [images[i], ...images.filter((_, idx) => idx !== i)];
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input
+          value={urlInput}
+          onChange={(e) => setUrlInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }}
+          className="input-glass flex-1 text-sm"
+          placeholder="Paste image URL…"
+        />
+        <button type="button" onClick={addUrl} disabled={images.length >= 5} className="btn-ghost px-3 py-2 text-xs disabled:opacity-40"><Plus size={14} /> Add</button>
+      </div>
+      <p className="text-[11px] text-ink-500">Up to 5 images. The first image is the primary thumbnail shown on product cards.</p>
+      {images.length === 0 ? (
+        <div className="grid h-24 place-items-center rounded-xl border border-dashed border-white/10 text-ink-500"><ImageIcon size={20} /></div>
+      ) : (
+        <div className="space-y-2">
+          {images.map((url, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2">
+              <img src={url} alt="" className="h-14 w-14 rounded-lg object-cover" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.2'; }} />
+              <input
+                value={url}
+                onChange={(e) => onChange(images.map((u, idx) => idx === i ? e.target.value : u))}
+                className="input-glass flex-1 font-mono text-xs"
+              />
+              <div className="flex shrink-0 gap-1">
+                {i !== 0 && (
+                  <button type="button" onClick={() => setPrimary(i)} title="Set as primary thumbnail" className="rounded-lg p-1.5 text-ink-400 hover:bg-gold-400/15 hover:text-gold-300"><Star size={13} /></button>
+                )}
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="Move up" className="rounded-lg p-1.5 text-ink-400 hover:bg-white/10 hover:text-ink-100 disabled:opacity-30"><ArrowUp size={13} /></button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === images.length - 1} title="Move down" className="rounded-lg p-1.5 text-ink-400 hover:bg-white/10 hover:text-ink-100 disabled:opacity-30"><ArrowDown size={13} /></button>
+                <button type="button" onClick={() => remove(i)} title="Remove" className="rounded-lg p-1.5 text-danger hover:bg-danger/10"><Trash2 size={13} /></button>
+              </div>
+              {i === 0 && <span className="chip shrink-0 border-gold-400/30 text-gold-300 text-[10px]">Primary</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProductEditModal({ product, categories, onClose, onSaved }: { product: Product | null; categories: Category[]; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({
     name: product?.name || '',
@@ -557,7 +622,13 @@ function ProductEditModal({ product, categories, onClose, onSaved }: { product: 
           <div><label className="mb-1 block text-xs uppercase text-ink-400">Stock</label><input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="input-glass" /></div>
           <div><label className="mb-1 block text-xs uppercase text-ink-400">Low-stock threshold</label><input type="number" value={form.low_stock_threshold} onChange={(e) => setForm({ ...form, low_stock_threshold: e.target.value })} className="input-glass" /></div>
           <div className="sm:col-span-2"><label className="mb-1 block text-xs uppercase text-ink-400">Description</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-glass min-h-20 resize-none" /></div>
-          <div className="sm:col-span-2"><label className="mb-1 block text-xs uppercase text-ink-400">Images (one URL per line)</label><textarea value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} className="input-glass min-h-24 resize-none font-mono text-xs" placeholder="https://…" /></div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs uppercase text-ink-400">Product Images</label>
+            <ImageManager
+              images={form.images.split('\n').map((s) => s.trim()).filter(Boolean)}
+              onChange={(imgs) => setForm({ ...form, images: imgs.join('\n') })}
+            />
+          </div>
           <div><label className="mb-1 block text-xs uppercase text-ink-400">Colors (comma separated)</label><input value={form.colors} onChange={(e) => setForm({ ...form, colors: e.target.value })} className="input-glass" /></div>
           <div><label className="mb-1 block text-xs uppercase text-ink-400">Sizes (comma separated)</label><input value={form.sizes} onChange={(e) => setForm({ ...form, sizes: e.target.value })} className="input-glass" /></div>
           <div className="sm:col-span-2"><label className="mb-1 block text-xs uppercase text-ink-400">Tags (comma separated)</label><input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="input-glass" /></div>
@@ -1437,26 +1508,64 @@ function PoliciesTab() {
 }
 
 // ============ HERO BANNERS ============
+const HERO_FONT_OPTIONS: { value: HeroFont; label: string }[] = [
+  { value: 'serif', label: 'Elegant Serif (Cormorant)' },
+  { value: 'sans', label: 'Modern Sans (Inter)' },
+  { value: 'playfair', label: 'Playfair Display' },
+  { value: 'cinematic', label: 'Cinematic Luxury' },
+];
+
 function BannersTab() {
   const { form, setForm, save, saving, msg } = useSettingsForm();
   const s = form as StoreSettings;
-  const banners = s.hero_banners || [];
-  const update = (i: number, field: string, val: string) => {
+  const banners: HeroBanner[] = s.hero_banners || [];
+  const update = (i: number, field: keyof HeroBanner, val: string) => {
     const next = [...banners];
     next[i] = { ...next[i], [field]: val };
     setForm({ ...form, hero_banners: next });
   };
-  const add = () => setForm({ ...form, hero_banners: [...banners, { image: '', title: '', subtitle: '', cta: 'Shop Now', link: '/shop' }] });
+  const add = () => setForm({
+    ...form,
+    hero_banners: [...banners, { image: '', title: '', subtitle: '', cta: 'Shop Now', link: '/shop', badge: '', secondary_cta: '', secondary_link: '', font: s.hero_font || 'serif' }],
+  });
   const remove = (i: number) => setForm({ ...form, hero_banners: banners.filter((_, idx) => idx !== i) });
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= banners.length) return;
+    const next = [...banners];
+    [next[i], next[j]] = [next[j], next[i]];
+    setForm({ ...form, hero_banners: next });
+  };
   return (
     <div className="space-y-5">
       <h2 className="font-display text-2xl">Homepage Hero Banners</h2>
-      <p className="text-sm text-ink-400">Manage the rotating hero banner slider on the homepage. Add multiple slides for a carousel effect.</p>
+      <p className="text-sm text-ink-400">Manage the rotating hero banner slider on the homepage. Add multiple slides for a carousel effect. Reorder with the arrow buttons.</p>
+
+      <div className="card-3d space-y-3 p-5">
+        <h3 className="flex items-center gap-2 font-display text-lg text-gold-300"><Sparkles size={16} /> Default Hero Settings</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div><label className="mb-1 block text-xs uppercase text-ink-400">Default Badge Text</label><input value={s.hero_badge || ''} onChange={(e) => setForm({ ...form, hero_badge: e.target.value })} className="input-glass text-sm" placeholder="Luxury Fashion House · Est. 2025" /></div>
+          <div><label className="mb-1 block text-xs uppercase text-ink-400">Default Typography</label>
+            <select value={s.hero_font || 'serif'} onChange={(e) => setForm({ ...form, hero_font: e.target.value as HeroFont })} className="input-glass text-sm">
+              {HERO_FONT_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-ink-900">{o.label}</option>)}
+            </select>
+          </div>
+          <div><label className="mb-1 block text-xs uppercase text-ink-400">Default Secondary Button Label</label><input value={s.hero_secondary_cta || ''} onChange={(e) => setForm({ ...form, hero_secondary_cta: e.target.value })} className="input-glass text-sm" placeholder="Flash Sale" /></div>
+          <div><label className="mb-1 block text-xs uppercase text-ink-400">Default Secondary Button Link</label><input value={s.hero_secondary_link || ''} onChange={(e) => setForm({ ...form, hero_secondary_link: e.target.value })} className="input-glass text-sm" placeholder="/shop?flash=1" /></div>
+        </div>
+      </div>
+
       <div className="space-y-4">
         {banners.map((b, i) => (
           <div key={i} className="card-3d space-y-3 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase text-ink-400">Slide {i + 1}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase text-ink-400">Slide {i + 1}</span>
+                <div className="flex gap-0.5">
+                  <button onClick={() => move(i, -1)} disabled={i === 0} className="rounded-lg p-1 text-ink-400 hover:bg-white/10 hover:text-ink-100 disabled:opacity-30"><ArrowRight size={12} className="rotate-180" /></button>
+                  <button onClick={() => move(i, 1)} disabled={i === banners.length - 1} className="rounded-lg p-1 text-ink-400 hover:bg-white/10 hover:text-ink-100 disabled:opacity-30"><ArrowRight size={12} /></button>
+                </div>
+              </div>
               <button onClick={() => remove(i)} className="text-danger hover:text-danger/80"><Trash2 size={14} /></button>
             </div>
             <div className="relative h-32 overflow-hidden rounded-2xl bg-ink-900">
@@ -1464,10 +1573,18 @@ function BannersTab() {
             </div>
             <div><label className="mb-1 block text-xs uppercase text-ink-400">Image URL</label><input value={b.image} onChange={(e) => update(i, 'image', e.target.value)} className="input-glass text-sm" placeholder="https://…" /></div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div><label className="mb-1 block text-xs uppercase text-ink-400">Title</label><input value={b.title} onChange={(e) => update(i, 'title', e.target.value)} className="input-glass text-sm" /></div>
-              <div><label className="mb-1 block text-xs uppercase text-ink-400">Subtitle</label><input value={b.subtitle} onChange={(e) => update(i, 'subtitle', e.target.value)} className="input-glass text-sm" /></div>
-              <div><label className="mb-1 block text-xs uppercase text-ink-400">CTA Text</label><input value={b.cta} onChange={(e) => update(i, 'cta', e.target.value)} className="input-glass text-sm" /></div>
-              <div><label className="mb-1 block text-xs uppercase text-ink-400">CTA Link</label><input value={b.link} onChange={(e) => update(i, 'link', e.target.value)} className="input-glass text-sm" /></div>
+              <div><label className="mb-1 block text-xs uppercase text-ink-400">Headline</label><input value={b.title} onChange={(e) => update(i, 'title', e.target.value)} className="input-glass text-sm" /></div>
+              <div><label className="mb-1 block text-xs uppercase text-ink-400">Badge Text (optional)</label><input value={b.badge || ''} onChange={(e) => update(i, 'badge', e.target.value)} className="input-glass text-sm" placeholder="Luxury Fashion House • Est. 2025" /></div>
+              <div className="sm:col-span-2"><label className="mb-1 block text-xs uppercase text-ink-400">Subtitle</label><input value={b.subtitle} onChange={(e) => update(i, 'subtitle', e.target.value)} className="input-glass text-sm" /></div>
+              <div><label className="mb-1 block text-xs uppercase text-ink-400">Primary Button Label</label><input value={b.cta} onChange={(e) => update(i, 'cta', e.target.value)} className="input-glass text-sm" /></div>
+              <div><label className="mb-1 block text-xs uppercase text-ink-400">Primary Button Link</label><input value={b.link} onChange={(e) => update(i, 'link', e.target.value)} className="input-glass text-sm" /></div>
+              <div><label className="mb-1 block text-xs uppercase text-ink-400">Secondary Button Label</label><input value={b.secondary_cta || ''} onChange={(e) => update(i, 'secondary_cta', e.target.value)} className="input-glass text-sm" placeholder="Flash Sale" /></div>
+              <div><label className="mb-1 block text-xs uppercase text-ink-400">Secondary Button Link</label><input value={b.secondary_link || ''} onChange={(e) => update(i, 'secondary_link', e.target.value)} className="input-glass text-sm" placeholder="/shop?flash=1" /></div>
+              <div className="sm:col-span-2"><label className="mb-1 block text-xs uppercase text-ink-400">Typography</label>
+                <select value={b.font || s.hero_font || 'serif'} onChange={(e) => update(i, 'font', e.target.value)} className="input-glass text-sm">
+                  {HERO_FONT_OPTIONS.map((o) => <option key={o.value} value={o.value} className="bg-ink-900">{o.label}</option>)}
+                </select>
+              </div>
             </div>
           </div>
         ))}

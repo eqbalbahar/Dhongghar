@@ -141,7 +141,13 @@ export interface HeroBanner {
   subtitle: string;
   cta: string;
   link: string;
+  badge?: string;
+  secondary_cta?: string;
+  secondary_link?: string;
+  font?: HeroFont;
 }
+
+export type HeroFont = 'serif' | 'sans' | 'playfair' | 'cinematic';
 
 export interface StoreSettings {
   id: number;
@@ -194,6 +200,10 @@ export interface StoreSettings {
   card_payment_url: string | null;
   // hero banners
   hero_banners: HeroBanner[] | null;
+  hero_badge: string | null;
+  hero_secondary_cta: string | null;
+  hero_secondary_link: string | null;
+  hero_font: HeroFont | null;
   // policy texts
   policy_return: string | null;
   policy_authentic: string | null;
