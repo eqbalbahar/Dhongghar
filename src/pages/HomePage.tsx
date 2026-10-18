@@ -205,7 +205,7 @@ export function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-16">
         <Reveal>
           <div className="relative overflow-hidden rounded-4xl border border-white/10">
-            <img src="https://images.pexels.com/photos/38240621/pexels-photo-38240621.jpeg?auto=compress&cs=tinysrgb&h=900" alt="" className="h-[40vh] w-full object-cover sm:h-[58vh]" />
+            <img src="https://images.pexels.com/photos/38240621/pexels-photo-38240621.jpeg?auto=compress&cs=tinysrgb&h=900" alt="" loading="lazy" className="h-[40vh] w-full object-cover sm:h-[58vh]" />
             <div className="absolute inset-0 bg-gradient-to-r from-ink-950/90 via-ink-950/40 to-transparent" />
             <div className="absolute inset-y-0 left-0 flex max-w-lg flex-col justify-center p-8 sm:p-12">
               <span className="chip mb-3 border-gold-400/30 bg-gold-400/10 text-gold-300"><Gem size={12} /> The Edit</span>

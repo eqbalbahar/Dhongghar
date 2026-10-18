@@ -168,7 +168,7 @@ export function ProductDetailPage({ onOpenCart }: { onOpenCart: () => void }) {
                   onClick={() => setActiveImg(i)}
                   className={`h-20 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${activeImg === i ? 'border-gold-400' : 'border-white/10 opacity-60 hover:opacity-100'}`}
                 >
-                  <img src={img} alt="" className="h-full w-full object-cover" />
+                  <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>

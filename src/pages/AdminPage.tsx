@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, Package, ShoppingCart, Ticket, Settings, Palette, BarChart3,
-  Search, Plus, Pencil, Trash2, X, Save, TrendingUp, Users, DollarSign, AlertTriangle,
+  Search, Plus, Pencil, Trash2, X, Save, TrendingUp, DollarSign, AlertTriangle,
   Download, Eye, Shield, Bitcoin, Sparkles, Phone, Mail, MapPin, Facebook, Instagram, Music2, MessageCircle,
   Truck, ShieldCheck, Lock, CheckCircle2, Send, Image as ImageIcon, Upload, FileDown, FileSpreadsheet,
   CreditCard, PlusCircle, Terminal, Copy, ArrowRight,
