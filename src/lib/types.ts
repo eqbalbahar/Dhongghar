@@ -98,6 +98,7 @@ export interface Order {
   customer_phone: string;
   shipping_address: string;
   city: string | null;
+  district: string | null;
   country: string;
   subtotal_bdt: number;
   discount_bdt: number;

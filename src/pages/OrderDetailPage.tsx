@@ -135,7 +135,7 @@ export function OrderDetailPage() {
               <p className="mb-2 text-xs uppercase tracking-wider text-ink-400">Shipping</p>
               <p className="text-ink-100">{order.customer_name}</p>
               <p className="text-ink-300">{order.shipping_address}</p>
-              <p className="text-ink-300">{order.city}, {order.country}</p>
+              <p className="text-ink-300">{order.district ? `${order.district}, ` : ''}{order.city}, {order.country}</p>
               <p className="text-ink-300">{order.customer_phone}</p>
               {order.customer_email && <p className="text-ink-300">{order.customer_email}</p>}
             </div>

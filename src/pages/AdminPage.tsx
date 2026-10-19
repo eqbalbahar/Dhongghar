@@ -1739,23 +1739,34 @@ function AdminSecurityTab() {
       setPwMsg('Password must include uppercase, lowercase, and a number.'); setPwSaving(false); return;
     }
     if (pwForm.newPassword !== pwForm.confirmPassword) { setPwMsg('Passwords do not match'); setPwSaving(false); return; }
-    const { data, error } = await supabase.functions.invoke('admin-auth', {
-      body: { action: 'change_password', currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword },
-    });
-    if (error || data?.error) setPwMsg(data?.error || error?.message || 'Failed');
-    else { setPwMsg('Password updated successfully'); setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }
-    setPwSaving(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-auth', {
+        body: { action: 'change_password', currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword },
+      });
+      if (error || data?.error) setPwMsg(data?.error || error?.message || 'Failed to update password.');
+      else { setPwMsg('Password updated successfully.'); setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }
+    } catch (e: any) {
+      setPwMsg(e?.message || 'Network error — please try again.');
+    } finally {
+      setPwSaving(false);
+    }
   };
 
   const changeEmail = async () => {
     setEmailSaving(true); setEmailMsg('');
     if (!emailForm.newEmail.includes('@')) { setEmailMsg('Enter a valid email'); setEmailSaving(false); return; }
-    const { data, error } = await supabase.functions.invoke('admin-auth', {
-      body: { action: 'change_email', currentPassword: emailForm.currentPassword, newEmail: emailForm.newEmail },
-    });
-    if (error || data?.error) setEmailMsg(data?.error || error?.message || 'Failed');
-    else { setEmailMsg('Email updated successfully'); setEmailForm({ currentPassword: '', newEmail: '' }); }
-    setEmailSaving(false);
+    if (!emailForm.currentPassword) { setEmailMsg('Enter your current password to confirm.'); setEmailSaving(false); return; }
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-auth', {
+        body: { action: 'change_email', currentPassword: emailForm.currentPassword, newEmail: emailForm.newEmail },
+      });
+      if (error || data?.error) setEmailMsg(data?.error || error?.message || 'Failed to update email.');
+      else { setEmailMsg('Email updated successfully.'); setEmailForm({ currentPassword: '', newEmail: '' }); }
+    } catch (e: any) {
+      setEmailMsg(e?.message || 'Network error — please try again.');
+    } finally {
+      setEmailSaving(false);
+    }
   };
 
   return (

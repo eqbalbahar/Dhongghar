@@ -23,6 +23,7 @@ export function CheckoutPage() {
     phone: profile?.phone || '',
     address: '',
     city: '',
+    district: '',
     notes: '',
   });
   const [payment, setPayment] = useState<PaymentMethod>('cod');
@@ -123,75 +124,80 @@ export function CheckoutPage() {
     }
     setLoading(true);
 
-    const { data: orderNum } = await supabase.rpc('generate_order_number');
-    const orderNumber = orderNum as string;
+    try {
+      const { data: orderNum } = await supabase.rpc('generate_order_number');
+      const orderNumber = orderNum as string;
 
-    const { data: orderRow, error: orderErr } = await supabase
-      .from('orders')
-      .insert({
-        order_number: orderNumber,
-        user_id: user?.id || null,
-        customer_name: form.name,
-        customer_email: form.email || null,
-        customer_phone: form.phone,
-        shipping_address: form.address,
-        city: form.city || null,
-        subtotal_bdt: subtotalBdt,
-        discount_bdt: couponDiscountBdt,
-        shipping_bdt: shippingBdt,
-        total_bdt: totalBdt,
-        payment_method: payment,
-        payment_status: payment === 'cod' ? 'unpaid' : withBinanceTxid ? 'pending' : 'pending',
-        binance_txid: withBinanceTxid || null,
-        trxid: (payment === 'bkash' || payment === 'nagad' || payment === 'rocket') ? trxid.trim() || null : null,
-        coupon_code: couponCode,
-        status: 'pending',
-        notes: form.notes || null,
-      })
-      .select()
-      .single();
+      const { data: orderRow, error: orderErr } = await supabase
+        .from('orders')
+        .insert({
+          order_number: orderNumber,
+          user_id: user?.id || null,
+          customer_name: form.name,
+          customer_email: form.email || null,
+          customer_phone: form.phone,
+          shipping_address: form.address,
+          city: form.city || null,
+          district: form.district || null,
+          subtotal_bdt: subtotalBdt,
+          discount_bdt: couponDiscountBdt,
+          shipping_bdt: shippingBdt,
+          total_bdt: totalBdt,
+          payment_method: payment,
+          payment_status: payment === 'cod' ? 'unpaid' : withBinanceTxid ? 'pending' : 'pending',
+          binance_txid: withBinanceTxid || null,
+          trxid: (payment === 'bkash' || payment === 'nagad' || payment === 'rocket') ? trxid.trim() || null : null,
+          coupon_code: couponCode,
+          status: 'pending',
+          notes: form.notes || null,
+        })
+        .select()
+        .single();
 
-    if (orderErr || !orderRow) {
-      setError(orderErr?.message || 'Failed to place order. Please try again.');
-      setLoading(false);
-      return;
-    }
-
-    const orderItems = items.map((i) => ({
-      order_id: orderRow.id,
-      product_id: i.id,
-      name: i.name,
-      image_url: i.image,
-      size: i.size,
-      color: i.color,
-      unit_price_bdt: i.price_bdt,
-      quantity: i.quantity,
-      line_total_bdt: i.price_bdt * i.quantity,
-    }));
-    await supabase.from('order_items').insert(orderItems);
-
-    if (couponCode) {
-      const { data: coupon } = await supabase.from('coupons').select('id').eq('code', couponCode).maybeSingle();
-      if (coupon) {
-        await supabase.from('coupon_usages').insert({ coupon_id: coupon.id, order_id: orderRow.id, code: couponCode });
-        await supabase.rpc('increment_coupon_used', { code: couponCode }).then(({ error }) => { if (error) console.warn('coupon inc', error.message); });
+      if (orderErr || !orderRow) {
+        setError(orderErr?.message || 'Failed to place order. Please try again.');
+        return;
       }
-    }
 
-    trackPurchase({
-      id: orderRow.id,
-      order_number: orderNumber,
-      total: totalBdt,
-      shipping: shippingBdt,
-      tax: 0,
-      items: items.map((i) => ({ id: i.id, name: i.name, price: i.price_bdt, quantity: i.quantity })),
-    });
+      const orderItems = items.map((i) => ({
+        order_id: orderRow.id,
+        product_id: i.id,
+        name: i.name,
+        image_url: i.image,
+        size: i.size,
+        color: i.color,
+        unit_price_bdt: i.price_bdt,
+        quantity: i.quantity,
+        line_total_bdt: i.price_bdt * i.quantity,
+      }));
+      await supabase.from('order_items').insert(orderItems);
 
-    clear();
-    setLoading(false);
-    setSuccess({ orderNumber, binance: payment === 'binance' && !withBinanceTxid });
-    if (withBinanceTxid || payment !== 'binance') {
-      navigate(`/order/${orderNumber}`);
+      if (couponCode) {
+        const { data: coupon } = await supabase.from('coupons').select('id').eq('code', couponCode).maybeSingle();
+        if (coupon) {
+          await supabase.from('coupon_usages').insert({ coupon_id: coupon.id, order_id: orderRow.id, code: couponCode });
+          await supabase.rpc('increment_coupon_used', { code: couponCode }).then(({ error }) => { if (error) console.warn('coupon inc', error.message); });
+        }
+      }
+
+      trackPurchase({
+        id: orderRow.id,
+        order_number: orderNumber,
+        total: totalBdt,
+        shipping: shippingBdt,
+        tax: 0,
+        items: items.map((i) => ({ id: i.id, name: i.name, price: i.price_bdt, quantity: i.quantity })),
+      });
+
+      clear();
+      setSuccess({ orderNumber, binance: payment === 'binance' && !withBinanceTxid });
+      if (withBinanceTxid || payment !== 'binance') {
+        navigate(`/order/${orderNumber}`);
+      }
+    } catch (e: any) {
+      setError(e?.message || 'An unexpected error occurred while placing your order. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -244,6 +250,10 @@ export function CheckoutPage() {
               <div>
                 <label className="mb-1 block text-xs uppercase tracking-wider text-ink-400">City</label>
                 <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="input-glass" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs uppercase tracking-wider text-ink-400">District / Area</label>
+                <input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} className="input-glass" placeholder="e.g. Gulshan, Dhanmondi" />
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs uppercase tracking-wider text-ink-400">Shipping Address *</label>
