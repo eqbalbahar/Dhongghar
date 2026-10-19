@@ -16,7 +16,7 @@ import { fetchProducts, fetchCategories } from '@/lib/catalog';
 import type { Product, Order, Coupon, Category, StoreSettings, OrderStatus, HeroBanner, HeroFont } from '@/lib/types';
 import { Modal } from '@/components/ui/Modal';
 
-type AdminTab = 'dashboard' | 'products' | 'categories' | 'orders' | 'coupons' | 'appearance' | 'pixels' | 'payments' | 'courier' | 'policies' | 'banners' | 'ai' | 'contact' | 'fraud' | 'admin_security' | 'developer';
+type AdminTab = 'dashboard' | 'products' | 'categories' | 'orders' | 'coupons' | 'appearance' | 'pixels' | 'payments' | 'courier' | 'sms' | 'policies' | 'banners' | 'ai' | 'contact' | 'fraud' | 'admin_security' | 'developer';
 
 // In-memory gate flag — resets on full page reload, which is intentional.
 // The real auth check still happens via Supabase in AdminPage.
@@ -169,6 +169,7 @@ export function AdminPage() {
     { id: 'pixels', label: 'Tracking Pixels', icon: BarChart3 },
     { id: 'payments', label: 'Payments', icon: DollarSign },
     { id: 'courier', label: 'Courier', icon: Truck },
+    { id: 'sms', label: 'SMS Config', icon: MessageCircle },
     { id: 'ai', label: 'AI Assistant', icon: Sparkles },
     { id: 'contact', label: 'Contact & Social', icon: Phone },
     { id: 'fraud', label: 'Fraud Shield', icon: Shield },
@@ -211,6 +212,7 @@ export function AdminPage() {
           {tab === 'pixels' && <PixelsTab />}
           {tab === 'payments' && <PaymentsTab />}
           {tab === 'courier' && <CourierTab />}
+          {tab === 'sms' && <SmsConfigTab />}
           {tab === 'ai' && <AiTab />}
           {tab === 'contact' && <ContactTab />}
           {tab === 'fraud' && <FraudTab />}
@@ -1596,6 +1598,107 @@ function BannersTab() {
   );
 }
 
+// ============ SMS CONFIGURATION ============
+function SmsConfigTab() {
+  const { form, setForm, save, saving, msg } = useSettingsForm();
+  const s = form as StoreSettings;
+  const set = (k: keyof StoreSettings, v: any) => setForm({ ...form, [k]: v });
+  const [testMsg, setTestMsg] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testPhone, setTestPhone] = useState('');
+
+  const sendTest = async () => {
+    setTesting(true); setTestMsg('');
+    if (!s.sms_api_key || !s.sms_endpoint) {
+      setTestMsg('Configure API key and endpoint first.');
+      setTesting(false);
+      return;
+    }
+    if (!testPhone.trim()) {
+      setTestMsg('Enter a phone number to send the test SMS.');
+      setTesting(false);
+      return;
+    }
+    // Defer actual SMS sending to a server-side function in production.
+    // Here we validate the configuration is present and reachable.
+    try {
+      const res = await fetch(s.sms_endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.sms_api_key}` },
+        body: JSON.stringify({
+          sender: s.sms_sender_id || 'DHONG GHAR',
+          to: testPhone.trim(),
+          message: 'Test SMS from DHONG GHAR admin panel — your SMS configuration is working.',
+        }),
+      });
+      if (res.ok) setTestMsg('Test SMS sent successfully.');
+      else setTestMsg(`Provider responded with ${res.status}. Check your credentials and endpoint.`);
+    } catch (e: any) {
+      setTestMsg(`Could not reach the endpoint: ${e?.message || 'Network error'}`);
+    }
+    setTesting(false);
+  };
+
+  return (
+    <div className="space-y-5">
+      <h2 className="font-display text-2xl">SMS Configuration</h2>
+      <p className="text-sm text-ink-400">Configure your transactional SMS provider to send order confirmations and status updates to customers via SMS.</p>
+
+      <div className="card-3d space-y-4 p-6">
+        <div>
+          <label className="mb-1 block text-xs uppercase text-ink-400">API Key / Token</label>
+          <input
+            value={s.sms_api_key || ''}
+            onChange={(e) => set('sms_api_key', e.target.value)}
+            className="input-glass font-mono text-sm"
+            placeholder="e.g. sk_live_abc123…"
+            type="password"
+          />
+          <p className="mt-1 text-[11px] text-ink-500">Stored securely in the database. Only visible to admin users.</p>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs uppercase text-ink-400">Sender ID / Masking Name</label>
+          <input
+            value={s.sms_sender_id || ''}
+            onChange={(e) => set('sms_sender_id', e.target.value)}
+            className="input-glass"
+            placeholder="e.g. DHONG GHAR"
+            maxLength={11}
+          />
+          <p className="mt-1 text-[11px] text-ink-500">The name that appears as the sender on customer phones (max 11 characters).</p>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs uppercase text-ink-400">Provider Endpoint URL</label>
+          <input
+            value={s.sms_endpoint || ''}
+            onChange={(e) => set('sms_endpoint', e.target.value)}
+            className="input-glass font-mono text-sm"
+            placeholder="https://api.yoursmsprovider.com/v1/send"
+          />
+          <p className="mt-1 text-[11px] text-ink-500">The REST endpoint the system POSTs to with {`{ sender, to, message }`}.</p>
+        </div>
+        {msg && <p className={`text-sm ${msg.includes('Saved') ? 'text-accent-300' : 'text-danger'}`}>{msg}</p>}
+        <button onClick={() => save()} disabled={saving} className="btn-gold w-fit">{saving ? 'Saving…' : <><Save size={14} /> Save Config</>}</button>
+      </div>
+
+      <div className="card-3d space-y-3 p-6">
+        <h3 className="flex items-center gap-2 font-display text-lg text-gold-300"><Send size={16} /> Send Test SMS</h3>
+        <p className="text-xs text-ink-400">Verify your configuration by sending a test message to any phone number.</p>
+        <div className="flex gap-2">
+          <input
+            value={testPhone}
+            onChange={(e) => setTestPhone(e.target.value)}
+            className="input-glass flex-1"
+            placeholder="01XXXXXXXXX"
+          />
+          <button onClick={sendTest} disabled={testing} className="btn-ghost px-4 py-2 text-sm">{testing ? 'Sending…' : 'Send Test'}</button>
+        </div>
+        {testMsg && <p className={`text-sm ${testMsg.includes('success') ? 'text-accent-300' : 'text-warning'}`}>{testMsg}</p>}
+      </div>
+    </div>
+  );
+}
+
 // ============ ADMIN SECURITY ============
 function AdminSecurityTab() {
   const { user } = useAuth();
@@ -1606,9 +1709,35 @@ function AdminSecurityTab() {
   const [pwSaving, setPwSaving] = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
 
+  const passwordStrength = (pw: string): { score: number; label: string; color: string } => {
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[a-z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    const levels = [
+      { label: 'Too weak', color: 'bg-danger' },
+      { label: 'Weak', color: 'bg-danger' },
+      { label: 'Fair', color: 'bg-warning' },
+      { label: 'Good', color: 'bg-gold-400' },
+      { label: 'Strong', color: 'bg-accent-500' },
+      { label: 'Very strong', color: 'bg-accent-500' },
+      { label: 'Excellent', color: 'bg-accent-500' },
+    ];
+    return { score, ...levels[Math.min(score, 6)] };
+  };
+
+  const strength = passwordStrength(pwForm.newPassword);
+
   const changePassword = async () => {
     setPwSaving(true); setPwMsg('');
+    if (!pwForm.currentPassword) { setPwMsg('Enter your current password to confirm the change.'); setPwSaving(false); return; }
     if (pwForm.newPassword.length < 8) { setPwMsg('New password must be at least 8 characters'); setPwSaving(false); return; }
+    if (!/[A-Z]/.test(pwForm.newPassword) || !/[a-z]/.test(pwForm.newPassword) || !/[0-9]/.test(pwForm.newPassword)) {
+      setPwMsg('Password must include uppercase, lowercase, and a number.'); setPwSaving(false); return;
+    }
     if (pwForm.newPassword !== pwForm.confirmPassword) { setPwMsg('Passwords do not match'); setPwSaving(false); return; }
     const { data, error } = await supabase.functions.invoke('admin-auth', {
       body: { action: 'change_password', currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword },
@@ -1638,9 +1767,21 @@ function AdminSecurityTab() {
         <h3 className="flex items-center gap-2 font-display text-lg text-gold-300"><Lock size={16} /> Change Password</h3>
         <div><label className="mb-1 block text-xs uppercase text-ink-400">Current Password</label><input type="password" value={pwForm.currentPassword} onChange={(e) => setPwForm({ ...pwForm, currentPassword: e.target.value })} className="input-glass" /></div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div><label className="mb-1 block text-xs uppercase text-ink-400">New Password</label><input type="password" value={pwForm.newPassword} onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })} className="input-glass" /></div>
+          <div>
+            <label className="mb-1 block text-xs uppercase text-ink-400">New Password</label>
+            <input type="password" value={pwForm.newPassword} onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })} className="input-glass" />
+            {pwForm.newPassword && (
+              <div className="mt-2">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div className={`h-full transition-all duration-300 ${strength.color}`} style={{ width: `${(strength.score / 6) * 100}%` }} />
+                </div>
+                <p className="mt-1 text-[11px] text-ink-400">Strength: <span className="text-ink-200">{strength.label}</span></p>
+              </div>
+            )}
+          </div>
           <div><label className="mb-1 block text-xs uppercase text-ink-400">Confirm New Password</label><input type="password" value={pwForm.confirmPassword} onChange={(e) => setPwForm({ ...pwForm, confirmPassword: e.target.value })} className="input-glass" /></div>
         </div>
+        <p className="rounded-xl bg-white/[0.03] px-3 py-2 text-[11px] text-ink-400">Password must be at least 8 characters and include uppercase, lowercase, and a number. A special character makes it stronger.</p>
         {pwMsg && <p className={`text-sm ${pwMsg.includes('successfully') ? 'text-accent-300' : 'text-danger'}`}>{pwMsg}</p>}
         <button onClick={changePassword} disabled={pwSaving} className="btn-gold w-fit">{pwSaving ? 'Saving…' : 'Update Password'}</button>
       </div>

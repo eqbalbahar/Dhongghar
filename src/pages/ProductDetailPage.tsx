@@ -45,7 +45,7 @@ export function ProductDetailPage({ onOpenCart }: { onOpenCart: () => void }) {
         if (p) {
           setColor(p.colors?.[0] ?? null);
           setSize(p.sizes?.[0] ?? null);
-          trackViewContent({ id: p.id, name: p.name, price_bdt: Number(p.price_bdt) });
+          trackViewContent({ id: p.id, name: p.name, price_bdt: Number(p.price_bdt), category: p.category?.name });
           fetchProductReviews(p.id).then(setReviews).catch(() => {});
           // related: same category
           fetchProducts({ category: p.category_id ?? undefined, limit: 5 }).then((r) => setRelated(r.filter((x) => x.id !== p.id).slice(0, 4)));
@@ -69,7 +69,7 @@ export function ProductDetailPage({ onOpenCart }: { onOpenCart: () => void }) {
       size,
       stock: product.stock,
     }, qty);
-    trackAddToCart({ id: product.id, name: product.name, price_bdt: Number(product.price_bdt) }, qty);
+    trackAddToCart({ id: product.id, name: product.name, price_bdt: Number(product.price_bdt), category: product.category?.name }, qty);
     onOpenCart();
   };
 

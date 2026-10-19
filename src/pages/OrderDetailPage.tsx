@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Clock, Package, Truck, Home, XCircle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useSettings } from '@/context/SettingsContext';
 import { formatMoney } from '@/lib/format';
+import { trackPurchase } from '@/lib/tracking';
 import type { Order, OrderItem } from '@/lib/types';
 
 const STEPS = [
@@ -21,6 +22,7 @@ export function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const firedPurchase = useRef<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -29,9 +31,32 @@ export function OrderDetailPage() {
       .eq('order_number', orderNumber)
       .maybeSingle()
       .then(({ data }) => {
-        setOrder(data as Order | null);
-        if (data) {
-          supabase.from('order_items').select('*').eq('order_id', (data as Order).id).then(({ data: its }) => setItems((its as OrderItem[]) || []));
+        const o = data as Order | null;
+        setOrder(o);
+        if (o) {
+          supabase.from('order_items').select('*').eq('order_id', o.id).then(({ data: its }) => {
+            const orderItems = (its as OrderItem[]) || [];
+            setItems(orderItems);
+            // Fire purchase event once on the thank-you page
+            if (o.payment_status !== 'paid' || o.status === 'pending') {
+              if (firedPurchase.current !== o.order_number) {
+                firedPurchase.current = o.order_number;
+                trackPurchase({
+                  id: o.id,
+                  order_number: o.order_number,
+                  total: Number(o.total_bdt),
+                  shipping: Number(o.shipping_bdt),
+                  tax: 0,
+                  items: orderItems.map((it) => ({
+                    id: it.product_id || it.id,
+                    name: it.name,
+                    price: Number(it.unit_price_bdt),
+                    quantity: it.quantity,
+                  })),
+                });
+              }
+            }
+          });
         }
         setLoading(false);
       });

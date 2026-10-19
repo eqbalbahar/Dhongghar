@@ -182,6 +182,8 @@ export function CheckoutPage() {
       id: orderRow.id,
       order_number: orderNumber,
       total: totalBdt,
+      shipping: shippingBdt,
+      tax: 0,
       items: items.map((i) => ({ id: i.id, name: i.name, price: i.price_bdt, quantity: i.quantity })),
     });
 

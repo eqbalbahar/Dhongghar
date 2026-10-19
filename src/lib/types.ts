@@ -222,6 +222,10 @@ export interface StoreSettings {
   paperfly_api_key: string | null;
   paperfly_merchant_id: string | null;
   default_courier: string | null;
+  // SMS provider
+  sms_api_key: string | null;
+  sms_sender_id: string | null;
+  sms_endpoint: string | null;
   default_theme: 'dark' | 'light';
   theme_toggle_visible: boolean;
   hero_overlay_opacity: number;
