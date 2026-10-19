@@ -29,9 +29,10 @@ export function AdminGate() {
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
 
-  // If already a signed-in admin, skip the gate.
+  // If already a signed-in admin, skip the gate. If signed in as non-admin, redirect away.
   useEffect(() => {
-    if (!loading && user && isAdmin) {
+    if (loading) return;
+    if (user && isAdmin) {
       gateUnlocked = true;
       setEntered(true);
     }

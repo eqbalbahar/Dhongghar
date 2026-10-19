@@ -19,22 +19,30 @@ export function AuthPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    if (mode === 'signin') {
-      const { error } = await signIn(email, password);
-      if (error) {
-        setError(error);
-        setLoading(false);
+    try {
+      if (mode === 'signin') {
+        const { error } = await signIn(email, password);
+        if (error) {
+          setError(error);
+          return;
+        }
+        // After sign-in, the AuthContext loads the profile via onAuthStateChange.
+        // Wait briefly for the profile to populate, then route by role.
+        await new Promise((r) => setTimeout(r, 200));
+        navigate('/auth/redirect');
       } else {
+        const { error } = await signUp(email, password, fullName, phone);
+        if (error) {
+          setError(error);
+          return;
+        }
+        // New signups are always 'customer' via the handle_new_user trigger.
         navigate('/account');
       }
-    } else {
-      const { error } = await signUp(email, password, fullName, phone);
-      if (error) {
-        setError(error);
-        setLoading(false);
-      } else {
-        navigate('/account');
-      }
+    } catch (e: any) {
+      setError(e?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 

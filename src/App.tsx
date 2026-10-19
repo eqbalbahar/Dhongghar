@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { AuthProvider } from '@/context/AuthContext';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { SettingsProvider } from '@/context/SettingsContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { CartProvider } from '@/context/CartContext';
@@ -27,6 +27,20 @@ function PageLoader() {
   );
 }
 
+function AuthRedirect() {
+  const { user, isAdmin, loading } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      navigate('/auth', { replace: true });
+      return;
+    }
+    navigate(isAdmin ? '/eqbalbaharase' : '/account', { replace: true });
+  }, [user, isAdmin, loading, navigate]);
+  return <div className="px-4 py-32 text-center text-ink-400">Redirecting…</div>;
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
@@ -45,6 +59,7 @@ function Shell() {
           <Route path="/shop" element={<Suspense fallback={<PageLoader />}><ShopPage /></Suspense>} />
           <Route path="/product/:slug" element={<Suspense fallback={<PageLoader />}><ProductDetailPage onOpenCart={() => setCartOpen(true)} /></Suspense>} />
           <Route path="/auth" element={<Suspense fallback={<PageLoader />}><AuthPage /></Suspense>} />
+          <Route path="/auth/redirect" element={<AuthRedirect />} />
           <Route path="/checkout" element={<Suspense fallback={<PageLoader />}><CheckoutPage /></Suspense>} />
           <Route path="/track-order" element={<Suspense fallback={<PageLoader />}><TrackOrderPage /></Suspense>} />
           <Route path="/account" element={<Suspense fallback={<PageLoader />}><AccountPage /></Suspense>} />
